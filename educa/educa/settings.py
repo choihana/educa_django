@@ -77,9 +77,9 @@ WSGI_APPLICATION = 'educa.wsgi.application'
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "educa_db",
-        "USER": "educa",
-        "PASSWORD": "1234",
+        "NAME": "educa",
+        "USER": "postgres"
+
     }
 }
 
@@ -120,6 +120,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
