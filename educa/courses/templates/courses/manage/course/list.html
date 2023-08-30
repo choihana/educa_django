@@ -9,6 +9,7 @@
         <p>
             <a href="{% url 'course_edit' obj.id %}">Edit</a>
             <a href="{% url 'course_delete' obj.id %}">Delete</a>
+            <a href="{% url 'course_module_update' obj.id %}">Edit modules</a>
         </p>
     </div>
     {% empty %}
