@@ -1,4 +1,5 @@
 from django.apps import apps
+from django.db.models import Count
 from django.forms import modelform_factory
 from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -6,7 +7,7 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.views.generic.base import TemplateResponseMixin, View
 
 from .forms import ModuleFormSet
-from .models import Course, Module, Content
+from .models import Course, Module, Content, Subject
 from django.contrib.auth.mixins import LoginRequiredMixin,PermissionRequiredMixin
 
 
@@ -29,11 +30,11 @@ class OwnerCourseMixin(OwnerMixin, LoginRequiredMixin, PermissionRequiredMixin):
     success_url = reverse_lazy('manage_course_list')
 
 class OwnerCourseEditMixin(OwnerCourseMixin, OwnerEditMixin):
-    template_name = 'courses/manage/course/form.html'
+    template_name = 'manage/course/form.html'
 
 # 강좌를 생성, 편집, 삭제하기 위한 뷰 -> 생성자만 접근 할 수 있음
 class ManageCourseListView(OwnerCourseMixin, ListView):
-    template_name = 'courses/manage/course/list.html'
+    template_name = 'manage/course/list.html'
     permission_required = 'courses.view_course'
 
 class CourseCreateView(OwnerCourseEditMixin, CreateView):
@@ -43,11 +44,11 @@ class CourseUpdateView(OwnerCourseEditMixin, UpdateView):
     permission_required = 'courses.change_course'
 
 class CourseDeleteView(OwnerCourseMixin, DeleteView):
-    template_name = 'courses/manage/course/delete.html'
+    template_name = 'manage/course/delete.html'
     permission_required = 'courses.delete_course'
 
 class CourseModuleUpdateView(TemplateResponseMixin, View):
-    template_name = 'courses/manage/module/formset.html'
+    template_name = 'manage/module/formset.html'
     course = None
 
     def get_formset(self, data=None):
@@ -78,45 +79,69 @@ class ContentCreateUpdateView(TemplateResponseMixin, View):
     module = None
     model = None
     obj = None
-    template_name = 'courses/manage/content/form.html'
+    template_name = 'manage/content/form.html'
 
     def get_model(self, model_name):
-        if model_name in ['text','video','image','file']:
-            return apps.get_model(app_label='courses', model_name=model_name)
+        if model_name in ['text', 'video', 'image', 'file']:
+            return apps.get_model(app_label='courses',
+                                  model_name=model_name)
         return None
 
-    def get_form(self,model, *args, **kwargs):
-        Form = modelform_factory(model, exclude = ['owner',
-                                                   'order',
-                                                   'created',
-                                                   'updated'])
-        return Form(*args, **kwargs)
+    def get_form(self, model, *args, **kwargs):
+        form_class = modelform_factory(model, exclude=['owner', 'order', 'created', 'updated'])
+        return form_class(*args, **kwargs)
+
     def dispatch(self, request, module_id, model_name, id=None):
-        self.module = get_object_or_404(Module,
-                                        id=module_id,
-                                        course__owner = request.user)
+        self.module = get_object_or_404(Module, id=module_id, course__owner=request.user)
         self.model = self.get_model(model_name)
         if id:
-            self.obj = get_object_or_404(self.model,
-                                         id=id,
-                                         owner = request.user)
-        return super().dispatch(request, module_id, model_name,id )
+            self.obj = get_object_or_404(self.model, id=id, owner=request.user)
+        return super().dispatch(request, module_id, model_name, id)
 
     def get(self, request, module_id, model_name, id=None):
         form = self.get_form(self.model, instance=self.obj)
-        return self.render_to_response({'form':form,
-                                        'object':self.obj
-        })
-    def post(self, request, module_id, model_name , id=None):
-        form = self.get_form(self.model, instance=self.obj,
+        return self.render_to_response({'form': form, 'object': self.obj})
+
+    def post(self, request, module_id, model_name, id=None):
+        form = self.get_form(self.model,
+                             instance=self.obj,
                              data=request.POST,
-                             files = request.FILES)
+                             files=request.FILES)
         if form.is_valid():
             obj = form.save(commit=False)
             obj.owner = request.user
             obj.save()
             if not id:
-                Content.objects.create(module=self.module, item = obj)
-
+                Content.objects.create(module=self.module, item=obj)
             return redirect('module_content_list', self.module.id)
-        return self.render_to_response({'form':form, 'object':self.obj})
+        return self.render_to_response({'form': form, 'object': self.obj})
+
+class ContentDeleteView(View):
+    def post(self, request, id):
+        content = get_object_or_404(Content, id=id , module__course__owner = request.user)
+        module = content.module
+        content.item.delete()
+        content.delete()
+        return redirect('module_content_list', module.id )
+
+
+class ModuleContentListView(TemplateResponseMixin, View):
+    template_name = 'manage/module/content_list.html'
+    def get(self,request, module_id):
+        module = get_object_or_404(Module, id=module_id, course__owner=request.user)
+        return self.render_to_response({'module':module})
+
+
+class CourseListView(TemplateResponseMixin, View):
+    model = Course
+    template_name = 'manage/course/list.html'
+
+    def get(self, request, subject=None):
+        subjects = Subject.objects.annotate(total_courses=Count('courses'))
+        courses = Course.objects.annotate(total_modules=Count('modules'))
+
+        if subject:
+            subject = get_object_or_404(Subject, slug=subject)
+            courses = courses.filter(subject=subject)
+
+        return self.render_to_response({'subjects':subjects, 'subject':subject, 'courses':courses})
