@@ -11,6 +11,7 @@ from .models import Course, Module, Content, Subject
 from django.contrib.auth.mixins import LoginRequiredMixin,PermissionRequiredMixin
 
 from students.forms import CourseEnrollForm
+from django.core.cache import cache
 
 
 # Create your views here.
@@ -139,7 +140,13 @@ class CourseListView(TemplateResponseMixin, View):
     template_name = 'courses/course/list.html'
 
     def get(self, request, slug=None):
-        subjects = Subject.objects.annotate(total_courses=Count('courses'))
+        #subjects = Subject.objects.annotate(total_courses=Count('courses'))
+        #캐시로 변경
+        subjects = cache.get('all_subjects')
+        #캐시에 없는 경우 db에서 설정해주고, 캐시설정해줌
+        if not subjects:
+            subjects = Subject.objects.annotate(total_courses=Count('courses'))
+            cache.set('all_subjects',subjects)
         courses = Course.objects.annotate(total_modules=Count('modules'))
 
         if slug:

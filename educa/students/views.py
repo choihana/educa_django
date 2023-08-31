@@ -6,7 +6,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, FormView, ListView, DetailView
 
 from .forms import CourseEnrollForm
-from ..courses.models import Course
+from courses.models import Course
 
 
 # Create your views here.
