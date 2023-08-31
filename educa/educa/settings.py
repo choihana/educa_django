@@ -41,9 +41,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'courses.apps.CoursesConfig',
     'students.apps.StudentsConfig',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -138,3 +140,8 @@ CACHES = {
         'LOCATION': '127.0.0.1:11211',
     }
 }
+
+# Debug toolbar 는 내부 IP주소가 아래와 같을때만 표시됨
+INTERNAL_IPS = [
+    '127.0.0.1'
+]
