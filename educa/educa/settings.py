@@ -33,6 +33,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,8 +43,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'courses.apps.CoursesConfig',
     'students.apps.StudentsConfig',
+    'chat.apps.ChatConfig',
     'debug_toolbar',
+    'redisboard',
+    'rest_framework',
+
+
+
 ]
+ROOT_URLCONF = 'educa.urls'
+ASGI_APPLICATION = 'educa.asgi.application'
 
 MIDDLEWARE = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
@@ -55,7 +65,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'educa.urls'
+
 
 TEMPLATES = [
     {
@@ -75,6 +85,9 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'educa.wsgi.application'
+
+
+
 
 
 # Database
@@ -136,8 +149,8 @@ LOGIN_REDIRECT_URL = reverse_lazy('student_course_list')
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
-        'LOCATION': '127.0.0.1:11211',
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379',
     }
 }
 
@@ -145,3 +158,11 @@ CACHES = {
 INTERNAL_IPS = [
     '127.0.0.1'
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PREMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ]
+}
+
+

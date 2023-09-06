@@ -140,34 +140,29 @@ class CourseListView(TemplateResponseMixin, View):
     template_name = 'courses/course/list.html'
 
     def get(self, request, slug=None):
-        #subjects = Subject.objects.annotate(total_courses=Count('courses'))
-        #캐시로 변경
         subjects = cache.get('all_subjects')
-        #캐시에 없는 경우 db에서 설정해주고, 캐시설정해줌
         if not subjects:
             subjects = Subject.objects.annotate(total_courses=Count('courses'))
-            cache.set('all_subjects',subjects)
-
+            cache.set('all_subjects', subjects)
         all_courses = Course.objects.annotate(total_modules=Count('modules'))
-        #courses = Course.objects.annotate(total_modules=Count('modules'))
-
         if slug:
             subject = get_object_or_404(Subject, slug=slug)
             key = f'subject_{subject.id}_courses'
-            #courses = courses.filter(subject=subject)
             courses = cache.get(key)
             if not courses:
-                courses = courses.filter(subject=subject)
-                cache.set(key,courses)
+                courses = all_courses.filter(subject=subject)
+                cache.set(key, courses)
         else:
             subject = None
             courses = cache.get('all_courses')
             if not courses:
                 courses = all_courses
                 cache.set('all_courses', courses)
-
-        return self.render_to_response({'subjects':subjects, 'subject':subject, 'courses':courses})
-
+        return self.render_to_response({
+            'subjects': subjects,
+            'subject': subject,
+            'courses': courses
+        })
 class CourseDetailView(DetailView):
     model = Course
     template_name = 'courses/course/detail.html'
